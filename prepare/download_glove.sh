@@ -1,8 +1,11 @@
-echo -e "Downloading glove (in use by the evaluators)"
-gdown --fuzzy https://drive.google.com/file/d/1bCeS6Sh_mLVTebxIgiUHgdPrroW06mb6/view?usp=sharing
-rm -rf glove
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
-unzip glove.zip
+echo -e "Downloading glove (in use by the evaluators)"
+gdown --no-cookies --continue https://drive.google.com/file/d/1bCeS6Sh_mLVTebxIgiUHgdPrroW06mb6/view?usp=sharing
+
+unzip -n glove.zip
 echo -e "Cleaning\n"
 rm glove.zip
 

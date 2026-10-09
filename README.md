@@ -30,11 +30,24 @@ Recent advances in motion-aware large language models have shown remarkable prom
 
 
 ## ⛰️Get Started
+For the prepared macOS environment, download progress, and remaining GPU/data
+requirements, see [LOCAL_SETUP.md](LOCAL_SETUP.md).
+
 ### Build Environment
 ```
-conda create -n irg_motionllm python=3.10
+conda create -n irg_motionllm python=3.11
 conda activate irg_motionllm
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+```
+
+Use Python 3.10 or 3.11: the pinned NumPy 1.24.4 does not support Python
+3.12 or newer, where installation can fail with a `pkgutil.ImpImporter` error.
+Alternatively, with uv installed:
+
+```bash
+uv venv --python 3.11 --seed
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 ### Download Glove and extractor

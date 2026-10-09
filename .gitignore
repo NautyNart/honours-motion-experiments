@@ -1,0 +1,116 @@
+# Python environments and generated files
+.venv/
+.venv-*/
+.tox/
+.nox/
+venv/
+env/
+.conda/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Downloaded models and embeddings
+# Only ignore the root models directory; retain model source code elsewhere.
+/models/
+checkpoints
+ckpt
+glove
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.gguf
+*.bin
+
+# Downloaded datasets
+# Preserve SFT/HumanML3D and RL/HumanML3D source directories.
+/datasets/
+/data/
+/HumanML3D/
+/KIT-ML/
+**/dataset/HumanML3D/
+**/dataset/KIT-ML/
+**/datasets/HumanML3D/
+**/datasets/KIT-ML/
+**/data/HumanML3D/
+**/data/KIT-ML/
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.parquet
+*.arrow
+*.pkl
+*.pickle
+
+# Archives and incomplete downloads
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.part
+*.incomplete
+
+# Experiment outputs
+runs/
+experiments/
+outputs/
+results/
+visual_results/
+wandb/
+lightning_logs/
+logs/
+*.log
+events.out.tfevents.*
+
+# Caches
+.cache/
+.huggingface/
+.hf_home/
+
+# Local credentials and configuration
+.env
+.env/
+.env.*
+!.env.example
+!.env.sample
+.aws/
+.ssh/
+.kaggle/
+kaggle.json
+credentials.json
+application_default_credentials.json
+service-account*.json
+service_account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+.netrc
+.pypirc
+.git-credentials
+
+# Operating-system files
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Preserve project attribution
+!/LICENSE
+!/LICENSE.*
+!/NOTICE
+!/NOTICE.*
+!/CITATION.cff
