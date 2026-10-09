@@ -1,0 +1,5 @@
+A person walks forward, turns left, and stops.
+A person raises their right arm and waves.
+A person squats down and then stands up.
+A person takes two steps backwards.
+A person jumps once and lands on both feet.
