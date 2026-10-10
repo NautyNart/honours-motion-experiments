@@ -1,5 +1,11 @@
 # First IRG-MotionLLM baseline
 
+For Kaggle T4 GPUs, use [notebooks/baseline.ipynb](notebooks/baseline.ipynb).
+It includes an isolated Python 3.11 environment and an FP16 inference path via
+`--llm-dtype float16`; the VQ decoder remains FP32. The Linux workstation
+instructions below use the original BF16 configuration. Kaggle inference and
+FP16 numerical behavior still require the notebook's one-prompt smoke test.
+
 ## What is present in this checkout
 
 Checked on 10 October 2026 (Australia/Sydney):

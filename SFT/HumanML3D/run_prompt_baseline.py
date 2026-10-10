@@ -2,7 +2,7 @@
 
 Uses the same model defaults and loading order as test_unified.py. Paths supplied
 on the CLI are resolved from the caller's directory; internal asset paths are
-resolved from SFT/HumanML3D. See ../../BASELINE_GUIDE.md.
+resolved from SFT/HumanML3D. See ../../windows_pc_guide.md and notebooks/baseline.ipynb.
 """
 import argparse
 import json
@@ -55,6 +55,8 @@ def main():
     parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--render", action="store_true", help="Save first/final motion GIFs")
+    parser.add_argument("--llm-dtype", choices=("bfloat16", "float16"), default="bfloat16",
+                        help="Language model precision; use float16 for Kaggle T4. VQ decoder stays float32.")
     cli = parser.parse_args()
     if cli.limit < 1:
         parser.error("--limit must be positive")
@@ -87,22 +89,23 @@ def main():
     finally:
         sys.argv = original_argv
     if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is required for this baseline. See BASELINE_GUIDE.md.")
-    if not torch.cuda.is_bf16_supported(including_emulation=False):
-        raise RuntimeError("The upstream model uses bfloat16; use a GPU with native bfloat16 support.")
+        raise RuntimeError("CUDA is required for this baseline. See windows_pc_guide.md.")
+    if cli.llm_dtype == "bfloat16" and not torch.cuda.is_bf16_supported(including_emulation=False):
+        raise RuntimeError("This GPU lacks native bfloat16 support. Use --llm-dtype float16 on a T4.")
     for asset in (
         "ckpt/vqvae.pth",
         "checkpoints/t2m/VQVAEV3_CB1024_CMT_H1024_NRES3/meta/mean.npy",
         "checkpoints/t2m/VQVAEV3_CB1024_CMT_H1024_NRES3/meta/std.npy",
     ):
         if not Path(asset).is_file():
-            raise FileNotFoundError(f"Missing {Path(asset).resolve()}. See BASELINE_GUIDE.md.")
+            raise FileNotFoundError(f"Missing {Path(asset).resolve()}. See windows_pc_guide.md.")
     random.seed(cli.seed)
     np.random.seed(cli.seed)
     torch.manual_seed(cli.seed)
     torch.cuda.manual_seed_all(cli.seed)
     args.device = "cuda:0"
     args.llm_backbone = backbone
+    args.llm_dtype = cli.llm_dtype
     args.eval_task = "unified_mogen_cot_v3"
     args.generation_mode = "think_w_analysis_multi_round_gen"
     args.prompt_w_response = True
@@ -118,6 +121,10 @@ def main():
     _, loaded, missing = model.load_model(str(checkpoint), verbose=True)
     if missing:
         raise RuntimeError(f"Checkpoint left {len(missing)} parameters unloaded: {sorted(missing)[:8]}")
+    # load_model assigns checkpoint tensors directly, which can restore BF16.
+    # Reapply the requested LLM precision before moving weights to the GPU.
+    model.llm.to(dtype=model.llm_dtype)
+    model.net.float()
     model = model.to(args.device).eval()
     processor = TextProcessor(args)
     manifest = {
@@ -125,6 +132,7 @@ def main():
         "task": args.eval_task, "do_sample": False, "prompts": prompts,
         "torch": torch.__version__, "numpy": np.__version__,
         "gpu": torch.cuda.get_device_name(), "loaded_parameters": len(loaded),
+        "llm_dtype": cli.llm_dtype, "vq_dtype": "float32",
     }
     (output / "run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     with torch.inference_mode():

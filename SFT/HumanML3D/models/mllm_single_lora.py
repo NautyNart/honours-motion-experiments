@@ -13,6 +13,8 @@ class MotionLLM(nn.Module):
         super().__init__()
         
         self.args = args
+        # Keep the upstream default, while allowing FP16 inference on T4 GPUs.
+        self.llm_dtype = getattr(torch, getattr(args, 'llm_dtype', 'bfloat16'))
         # print(f'Load tokenizer and LLM from {self.args.llm_backbone}')
         if self.args.llm_tokenizer == '':
             self.args.llm_tokenizer = self.args.llm_backbone
@@ -26,13 +28,13 @@ class MotionLLM(nn.Module):
             self.llm = AutoModelForCausalLM.from_pretrained(
                 self.args.llm_backbone,
                 attn_implementation="flash_attention_2",
-                torch_dtype=torch.bfloat16,
+                torch_dtype=self.llm_dtype,
             )
         else:
             print('Attention: default')
             self.llm = AutoModelForCausalLM.from_pretrained(
                 self.args.llm_backbone,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=self.llm_dtype,
             )
         self.nb_text_tokens = len(self.tokenizer)
         self.mean = np.load('checkpoints/t2m/VQVAEV3_CB1024_CMT_H1024_NRES3/meta/mean.npy')
@@ -132,7 +134,7 @@ class MotionLLM(nn.Module):
     def activate_full_model(self):
         if self.w_lora:
             self.llm = self.llm.merge_and_unload()
-        self.llm.to(dtype=torch.bfloat16)
+        self.llm.to(dtype=self.llm_dtype)
         for name, param in self.llm.named_parameters():
             param.requires_grad = True
         self.w_lora = False
