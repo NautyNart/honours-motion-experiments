@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "seed": 42,
+  "fps": 20,
+  "thresholds": {
+    "status": "provisional_not_calibrated",
+    "sliding_speed_m_s": 0.075,
+    "penetration_depth_m": 0.01,
+    "floating_height_m": 0.05,
+    "min_duration_s": 0.15
+  },
+  "model": {
+    "backbone": "models/gemma-2-2b-it",
+    "checkpoint": "models/IRG-MotionLLM-HumanML3D/Stage-2/irg_motionllm_unified_sft_stage2.pth",
+    "dtype": "auto",
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "candidate_budget": 1
+  },
+  "conditions": ["unchanged", "semantic", "rule", "human"],
+  "rounds": 1,
+  "limit": null,
+  "bootstrap_replicates": 1000
+}

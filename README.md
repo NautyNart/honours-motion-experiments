@@ -2,6 +2,10 @@
 
 [paper link](https://arxiv.org/abs/2512.10730)
 
+Local honours experiment: [physical-defect pilot guide](pilot/README.md),
+[Kaggle notebook](notebooks/physical_pilot.ipynb), and
+[measurement definitions and sources](pilot/MEASUREMENTS.md).
+
 
 ## 📢News
 - [2026/07/01] Our IRG-MotionLLM is accepted by ECCV2026🎉🎉 The camera-ready version paper is available [here](https://github.com/HumanMLLM/IRG-MotionLLM/blob/main/paper-v2.pdf).

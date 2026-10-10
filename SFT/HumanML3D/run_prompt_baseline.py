@@ -169,7 +169,9 @@ def main():
                 if tokens.numel() == 0 or not ((tokens >= 0) & (tokens < args.nb_code)).all():
                     raise RuntimeError(f"Invalid {label} motion for prompt {idx}; inspect trace.json")
                 normalized = model.net.forward_decoder(tokens.long())
-                features = model.motion_denorm(normalized.float()).cpu()
+                # NumPy normalization statistics can promote FP32 output to FP64.
+                # Joint recovery creates FP32 tensors, so cast after denormalizing.
+                features = model.motion_denorm(normalized.float()).float().cpu()
                 joints = recover_from_ric(features, 22).numpy()[0]
                 if not np.isfinite(joints).all():
                     raise RuntimeError(f"Non-finite joint positions for prompt {idx}")
