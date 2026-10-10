@@ -20,10 +20,10 @@ def cell(kind, source):
     cells.append(item)
 
 
-cell("markdown", '''
-# IRG-MotionLLM: first Kaggle baseline
+cell("markdown", r'''
+# IRG-MotionLLM: Kaggle prompt baseline
 
-Run five text prompts through a pretrained **Stage-2** model and compare its
+Run your chosen text prompts through a pretrained **Stage-2** model and compare its
 first and final generated motions. Start with **one prompt** to verify model
 loading, FP16 generation, motion decoding, and GIF rendering.
 
@@ -33,7 +33,7 @@ The motion decoder and pretrained normalization statistics are required.
 
 Before running:
 
-1. Import this `.ipynb` into a Kaggle notebook and select **GPU T4 ×2** and **Internet on**.
+1. Import this `.ipynb` into Kaggle and enable a T4 GPU and Internet.
 2. Attach the **updated repository source** as a private Kaggle Dataset using
    **Add Input**, or set a public Git clone URL in step 2. Include `SFT/`,
    `prepare/`, and `requirements-baseline.txt`. Importing this notebook alone
@@ -57,13 +57,14 @@ References: [Kaggle notebooks](https://www.kaggle.com/docs/notebooks),
 [IRG model weights](https://huggingface.co/Lymann/IRG-MotionLLM-HumanML3D).
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 1. Check the Kaggle runtime
 
 Expect T4 GPUs in the output and CUDA available. This checks the notebook's
 preinstalled software; inference will use its own Python 3.11 environment.
 ''')
-cell("code", '''
+
+cell("code", r'''
 from pathlib import Path
 import json
 import os
@@ -86,7 +87,7 @@ for index in range(torch.cuda.device_count()):
 print("Scratch free space:", round(shutil.disk_usage("/tmp").free / 2**30, 1), "GiB")
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 2. Load your repository source
 
 Prefer attaching your updated source folder as a private Kaggle Dataset. The
@@ -97,7 +98,8 @@ Alternatively, set `REPO_URL` to your public repo's HTTPS clone URL. Commit and
 push these notebook/precision changes first. Keep private Git credentials out
 of URLs. To refresh an existing scratch copy, choose a new `REPO` directory.
 ''')
-cell("code", '''
+
+cell("code", r'''
 REPO_URL = ""  # Optional: public HTTPS clone URL of YOUR updated repo.
 SOURCE_REPO = None  # Optional: Path("/kaggle/input/your-dataset/your-repo-folder")
 REPO = Path("/tmp/honours-motion-experiments")
@@ -115,9 +117,9 @@ if not REPO.exists():
                 raise RuntimeError(f"Attach your updated source repo, or set SOURCE_REPO. Candidates: {candidates}")
             SOURCE_REPO = candidates[0]
         shutil.copytree(SOURCE_REPO, REPO,
-                        ignore=shutil.ignore_patterns(".git", ".venv", "__pycache__"))
+                        ignore=shutil.ignore_patterns(".git", ".venv*", "__pycache__", "outputs"))
 RUNNER = REPO / "SFT/HumanML3D/run_prompt_baseline.py"
-for path in (RUNNER, REPO / "requirements-baseline.txt", REPO / "prepare/baseline_prompts.txt"):
+for path in (RUNNER, REPO / "requirements-baseline.txt"):
     if not path.is_file():
         raise FileNotFoundError(f"Missing {path}. Upload the complete updated source.")
 if "--llm-dtype" not in RUNNER.read_text():
@@ -126,7 +128,7 @@ print("Repository:", REPO)
 print("Results:", RESULTS_ROOT)
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 3. Install an isolated inference environment
 
 This can take several minutes. `uv` provides Python 3.11 and a separate
@@ -136,7 +138,8 @@ Inference is launched as a subprocess using the new environment.
 The pinned CUDA 12.1 PyTorch wheel follows the
 [official version instructions](https://pytorch.org/get-started/previous-versions/#v251).
 ''')
-cell("code", '''
+
+cell("code", r'''
 ENV_DIR = Path("/tmp/irg-baseline-env")
 PYTHON = ENV_DIR / "bin/python"
 RUN_ENV = os.environ.copy()
@@ -160,7 +163,7 @@ gpu_check = "import torch; assert torch.cuda.is_available(); print(torch.__versi
 subprocess.run([str(PYTHON), "-c", gpu_check], env=RUN_ENV, check=True)
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 4. Enable Hugging Face access
 
 Create and enable `HF_TOKEN` in Kaggle Secrets. Accept Gemma access with the
@@ -168,7 +171,8 @@ same account. The token is passed through the subprocess environment and is
 not printed or saved to the notebook. Downloads will fail if Internet is off
 or Gemma access has not been granted.
 ''')
-cell("code", '''
+
+cell("code", r'''
 from kaggle_secrets import UserSecretsClient
 RUN_ENV["HF_TOKEN"] = UserSecretsClient().get_secret("HF_TOKEN")
 if not RUN_ENV["HF_TOKEN"]:
@@ -176,7 +180,7 @@ if not RUN_ENV["HF_TOKEN"]:
 print("Hugging Face secret loaded.")
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 5. Download Gemma and Stage-2
 
 These are large downloads. Only Stage-2 is downloaded from the IRG repository.
@@ -185,7 +189,8 @@ resume within the same session. Hugging Face's
 [download documentation](https://huggingface.co/docs/huggingface_hub/guides/download)
 explains the file filtering and local folders.
 ''')
-cell("code", '''
+
+cell("code", r'''
 download_script = r"""
 import json
 from pathlib import Path
@@ -209,7 +214,7 @@ subprocess.run([str(PYTHON), "-c", download_script, str(REPO), str(RESULTS_ROOT)
                env=RUN_ENV, check=True)
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 6. Download the motion decoder/statistics and create asset links
 
 The existing helpers download the Motion-Agent archive and evaluator archive.
@@ -218,7 +223,8 @@ The extractor helper also downloads KIT files; no KIT evaluation is run.
 Scripts are normalized to LF in the scratch copy so Windows line endings do
 not break Bash. Existing assets and links are preserved.
 ''')
-cell("code", '''
+
+cell("code", r'''
 VQ = REPO / "models/motion-agent/ckpt/vqvae.pth"
 META = REPO / "checkpoints/t2m/VQVAEV3_CB1024_CMT_H1024_NRES3/meta"
 jobs = [
@@ -228,7 +234,7 @@ jobs = [
 for needed, relative_script in jobs:
     if needed:
         script = REPO / relative_script
-        script.write_text(script.read_text(), newline="\\n")
+        script.write_text(script.read_text(), newline="\n")
         subprocess.run(["bash", str(script)], cwd=REPO, env=RUN_ENV, check=True)
 for link, target in [
     (REPO / "SFT/HumanML3D/ckpt", VQ.parent),
@@ -248,14 +254,21 @@ stats_check = "import numpy as np, sys; from pathlib import Path; p=Path(sys.arg
 subprocess.run([str(PYTHON), "-c", stats_check, str(META)], env=RUN_ENV, check=True)
 ''')
 
-cell("markdown", '''
-## 7. Select the checkpoint and prompts
+cell("markdown", r'''
+## 7. Configure the experiment and prompts
 
-If multiple `.pth` files are found, set `CHECKPOINT_CHOICE` to the full path
-you intend to evaluate. You can edit the five prompts here before starting.
-Keep the same prompts/settings when comparing checkpoints.
+Edit `PROMPTS`, `RUN_LABEL`, and `SEED` here. Any positive number of single-line
+prompts is supported. Seed 67 is the default; keep settings and prompt order
+fixed when making comparisons. Greedy decoding can still produce the same
+motion for different seeds.
+
+Running this cell creates a new experiment ID with the label, seed, prompt
+count, UTC time, and a short unique suffix. Rerun it to start a fresh experiment.
+Do not change its settings between the smoke and batch runs. If multiple
+checkpoints are listed, set `CHECKPOINT_CHOICE` explicitly.
 ''')
-cell("code", '''
+
+cell("code", r'''
 CHECKPOINT_CHOICE = ""  # Only needed if multiple Stage-2 files are listed.
 checkpoints = sorted((REPO / "models/IRG-MotionLLM-HumanML3D/Stage-2").rglob("*.pth"))
 print("Stage-2 checkpoint files:")
@@ -271,51 +284,107 @@ if not CHECKPOINT.is_file():
     raise FileNotFoundError(CHECKPOINT)
 
 PROMPTS = [
-    "A person walks forward, turns left, and stops.",
-    "A person raises their right arm and waves.",
-    "A person squats down and then stands up.",
-    "A person takes two steps backwards.",
-    "A person jumps once and lands on both feet.",
+    "A person walks forward 2 steps, does a back-flip, then continues walking.",
+    "A person lying flat on their back, holding their legs straight out wide",
+    "A person doing Cristiano Ronaldo's iconic celebration (the SIUUU)",
+    "A person walking backwards with their knees on the ground.",
+    "A person hopping around like a bunny to the left first, then to the right and stops at one place but keeps hopping.",
 ]
-PROMPT_FILE = RESULTS_ROOT / "prompts.txt"
-PROMPT_FILE.write_text("\\n".join(PROMPTS) + "\\n", encoding="utf-8")
-SEED = 42
-print("Selected:", CHECKPOINT)
+
+from datetime import datetime, timezone
+from uuid import uuid4
+import re
+
+RUN_LABEL = "prompt-baseline"  # Letters, digits, hyphens, or underscores.
+SEED = 67
+LLM_DTYPE = "float16"  # T4: FP16 language model; FP32 motion decoder.
+if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", RUN_LABEL):
+    raise ValueError("Use a short RUN_LABEL with letters, digits, hyphens, or underscores.")
+if not PROMPTS or any(not isinstance(p, str) or not p.strip() or "\n" in p or "\r" in p for p in PROMPTS):
+    raise ValueError("PROMPTS must contain nonempty, single-line strings.")
+PROMPTS = [p.strip() for p in PROMPTS]
+RUN_ID = f"{RUN_LABEL}-seed{SEED}-n{len(PROMPTS)}-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid4().hex[:8]}"
+EXPERIMENT_DIR = RESULTS_ROOT / RUN_ID
+EXPERIMENT_DIR.mkdir(parents=True, exist_ok=False)
+PROMPT_FILE = EXPERIMENT_DIR / "prompts.txt"
+PROMPT_FILE.write_text("\n".join(PROMPTS) + "\n", encoding="utf-8")
+RUN_CONFIG = {"run_id": RUN_ID, "seed": SEED, "prompts": PROMPTS,
+              "checkpoint": str(CHECKPOINT), "llm_dtype": LLM_DTYPE,
+              "vq_dtype": "float32", "do_sample": False}
+(EXPERIMENT_DIR / "experiment.json").write_text(json.dumps(RUN_CONFIG, indent=2), encoding="utf-8")
+if (RESULTS_ROOT / "asset_revisions.json").is_file():
+    shutil.copy2(RESULTS_ROOT / "asset_revisions.json", EXPERIMENT_DIR / "asset_revisions.json")
+SMOKE_DIR = EXPERIMENT_DIR / "smoke"
+BATCH_DIR = EXPERIMENT_DIR / "batch"
+print("Experiment:", RUN_ID)
+print("Selected checkpoint:", CHECKPOINT)
+print("Prompts:", len(PROMPTS))
+print("Results:", EXPERIMENT_DIR)
 print(PROMPT_FILE.read_text())
 ''')
 
-cell("markdown", '''
-## 8. Run ONE prompt first
+cell("markdown", r'''
+## 8. Run one prompt first
 
-Use `--llm-dtype float16` for the T4. The decoder remains float32, including
-after loading the checkpoint. The runner saves `run.json`, per-prompt
-`trace.json`, first/final joint arrays, and GIFs.
+The smoke test uses the first prompt, the configured seed and precision, and
+saves into this experiment's `smoke/` folder. Each run includes its own prompt
+file, runner metadata, generation log and completion status. Partial results
+are retained after errors and can be exported for diagnosis.
 
-Output folders must be new: choose another folder name for a rerun instead
-of overwriting results. If loading fails or generation runs out of memory,
-stop here and inspect the traceback. Running fewer prompts does not reduce
-the memory required for a single generation.
+Existing run folders are never overwritten. Rerun section 7 for a fresh
+experiment. Fewer prompts reduce total runtime, not single-generation memory.
 ''')
-cell("code", '''
-SMOKE_DIR = RESULTS_ROOT / "smoke-stage2-seed42"
 
+cell("code", r'''
 def run_baseline(output_dir, limit):
+    current = {"run_id": RUN_ID, "seed": SEED, "prompts": PROMPTS,
+               "checkpoint": str(CHECKPOINT), "llm_dtype": LLM_DTYPE,
+               "vq_dtype": "float32", "do_sample": False}
+    if current != RUN_CONFIG or PROMPT_FILE.read_text(encoding="utf-8") != "\n".join(PROMPTS) + "\n":
+        raise RuntimeError("Settings changed. Rerun section 7 to create a fresh experiment.")
     if output_dir.exists():
-        raise FileExistsError(f"Results already exist at {output_dir}; choose a fresh output folder.")
-    subprocess.run([
-        str(PYTHON), str(RUNNER),
+        raise FileExistsError(f"Results exist at {output_dir}. Rerun section 7 for a fresh experiment.")
+    command = [
+        str(PYTHON), "-u", str(RUNNER),
         "--llm-backbone", str(REPO / "models/gemma-2-2b-it"),
         "--llm-ckpt", str(CHECKPOINT),
         "--prompt-file", str(PROMPT_FILE),
         "--output-dir", str(output_dir),
-        "--llm-dtype", "float16",
+        "--llm-dtype", LLM_DTYPE,
         "--limit", str(limit), "--seed", str(SEED), "--render",
-    ], env=RUN_ENV, check=True)
+    ]
+    log_path = EXPERIMENT_DIR / f"{output_dir.name}.log"
+    status_path = EXPERIMENT_DIR / f"{output_dir.name}_status.json"
+    status = {"run": output_dir.name, "expected_prompts": limit, "status": "running",
+              "started_utc": datetime.now(timezone.utc).isoformat(), "command": command}
+    status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
+    try:
+        with log_path.open("w", encoding="utf-8") as log:
+            with subprocess.Popen(command, env=RUN_ENV, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace") as process:
+                for line in process.stdout:
+                    print(line, end="")
+                    log.write(line)
+                    log.flush()
+                returncode = process.wait()
+        status["returncode"] = returncode
+        if returncode:
+            raise subprocess.CalledProcessError(returncode, command)
+        status["status"] = "complete"
+    except BaseException as exc:
+        status.update(status="interrupted" if isinstance(exc, KeyboardInterrupt) else "failed", error=str(exc))
+        raise
+    finally:
+        status["finished_utc"] = datetime.now(timezone.utc).isoformat()
+        status_path.write_text(json.dumps(status, indent=2), encoding="utf-8")
+        if output_dir.is_dir():
+            shutil.copy2(PROMPT_FILE, output_dir / "prompts.txt")
+            shutil.copy2(EXPERIMENT_DIR / "experiment.json", output_dir / "experiment.json")
 
 run_baseline(SMOKE_DIR, 1)
 ''')
 
-cell("markdown", '''
+cell("markdown", r'''
 ## 9. Inspect the smoke test
 
 Confirm both animations are viewable and depict a human motion. Read the
@@ -323,7 +392,8 @@ trace to see whether assessment/refinement occurred and whether the response
 looks complete. A single motion block means no observable refinement.
 The model's assessment is generated text, not an independent quality score.
 ''')
-cell("code", '''
+
+cell("code", r'''
 from IPython.display import Image, Markdown, display
 
 first_prompt = SMOKE_DIR / "000"
@@ -340,65 +410,142 @@ for label in ("first", "final"):
 print(trace["generated_text"])
 ''')
 
-cell("markdown", '''
-## 10. Run the five-prompt pilot after inspection
+cell("markdown", r'''
+## 10. Run all prompts after inspection
 
-Set `RUN_FIVE_PROMPTS = True` only after the smoke test succeeds. This flag
-prevents an initial Run All from launching the larger pilot before inspection.
-The runner processes prompts sequentially on GPU 0 with greedy decoding.
+Set `RUN_BATCH = True` after inspecting the smoke test. The batch processes
+all entries in `PROMPTS` sequentially on GPU 0 with greedy decoding and saves
+to `batch/`. The smoke prompt is generated again as part of this full batch;
+the smoke and batch are not independent experimental samples.
 ''')
-cell("code", '''
-RUN_FIVE_PROMPTS = False
-FIVE_DIR = RESULTS_ROOT / "five-prompts-stage2-seed42"
-if RUN_FIVE_PROMPTS:
-    run_baseline(FIVE_DIR, len(PROMPTS))
+
+cell("code", r'''
+RUN_BATCH = False
+if RUN_BATCH:
+    run_baseline(BATCH_DIR, len(PROMPTS))
 else:
-    print("Five-prompt run skipped. Inspect the smoke test, set the flag to True, and rerun this cell.")
+    print("Batch skipped. Inspect the smoke test, set RUN_BATCH = True, and rerun this cell.")
 ''')
 
-cell("markdown", '''
-## 11. Record observations and save results
+cell("markdown", r'''
+## 11. Review and export this experiment
 
-Record whether the first/final motion matches the requested action, body
-side, direction, and event order. Note foot sliding or unstable poses.
-This compares motions within one model response, not independent direct and
-refinement models. Five examples are a qualitative pilot, not benchmark metrics.
+The next cell creates a browsable `index.html` with links to every prompt's
+first/final GIFs and trace, plus separate observation CSVs for smoke and batch.
+Incomplete or unstarted samples are listed explicitly. Existing assessment
+columns are preserved when this cell is rerun. Review action, body side,
+direction, event order, and physical defects. First/final motions are from
+one model response, not independent models; this is a qualitative pilot.
 
-The following cell writes a CSV template; fill its assessment columns after
-viewing the GIFs. Existing observations are preserved. Rerun the archive cell
-after updating the CSV. Use Save Version to retain notebook outputs, and
-download the ZIP from Kaggle's output files. Only results go into the ZIP;
-model weights and the environment stay in session scratch space.
+Run the final export cell even after a failed generation to save partial
+results and logs. It creates a uniquely named ZIP containing only this
+experiment, with relative links, metadata, prompts, arrays, GIFs, checksums,
+and transfer instructions. No models, environments, or credentials are added.
+After editing observation CSVs, rerun both cells to refresh the export.
+Download the ZIP using the displayed link and retain notebook outputs with
+Save Version. Extract it on your PC under `outputs/irg-baseline-results/`
+and open its `index.html`. For the physical pilot, explicitly pass the
+extracted `batch/` directory to `pilot prepare --baseline`; the new names
+are not recognised by the old five-prompt automatic discovery.
 ''')
-cell("code", '''
+
+cell("code", r'''
 import csv
-evaluation_dir = FIVE_DIR if FIVE_DIR.exists() else SMOKE_DIR
-rows = []
-for file in sorted(evaluation_dir.glob("*/trace.json")):
-    item = json.loads(file.read_text())
-    complete = all((file.parent / f"{label}.gif").is_file() for label in ("first", "final"))
-    rows.append({"sample": file.parent.name, "prompt": item["prompt"],
-                 "motion_blocks": item["num_motion_blocks"], "outputs_complete": complete,
-                 "generation_seconds": round(item["generation_seconds"], 2),
-                 "first_matches": "", "final_matches": "", "better_same_worse": "", "notes": ""})
-if not rows:
-    raise RuntimeError("No generated traces found. Complete the smoke test first.")
-observations = evaluation_dir / "observations.csv"
-if not observations.exists():
-    with observations.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+from html import escape
+from IPython.display import FileLink, display
+
+cards = []
+for run_dir, expected in ((SMOKE_DIR, 1), (BATCH_DIR, len(RUN_CONFIG["prompts"]))):
+    status_file = EXPERIMENT_DIR / f"{run_dir.name}_status.json"
+    if not run_dir.exists() and not status_file.exists():
+        continue
+    run_dir.mkdir(exist_ok=True)
+    observations = run_dir / "observations.csv"
+    previous = {}
+    if observations.exists():
+        with observations.open(newline="", encoding="utf-8") as handle:
+            previous = {row["sample"]: row for row in csv.DictReader(handle)}
+    rows = []
+    for index, prompt in enumerate(RUN_CONFIG["prompts"][:expected]):
+        sample = f"{index:03d}"
+        sample_dir = run_dir / sample
+        trace_file = sample_dir / "trace.json"
+        item = json.loads(trace_file.read_text(encoding="utf-8")) if trace_file.exists() else {}
+        required = ["trace.json", "first.gif", "final.gif", "first_263.npy", "final_263.npy", "first_xyz.npy", "final_xyz.npy"]
+        complete = all((sample_dir / name).is_file() for name in required)
+        row = {"sample": sample, "prompt": prompt, "motion_blocks": item.get("num_motion_blocks", ""),
+               "outputs_complete": complete, "generation_seconds": item.get("generation_seconds", ""),
+               "first_matches": "", "final_matches": "", "better_same_worse": "", "notes": ""}
+        for field in ("first_matches", "final_matches", "better_same_worse", "notes"):
+            row[field] = previous.get(sample, {}).get(field, "")
+        rows.append(row)
+        links = []
+        for name in required:
+            if (sample_dir / name).is_file():
+                relative = f"{run_dir.name}/{sample}/{name}"
+                links.append(f'<a href="{relative}">{name}</a>')
+        animations = []
+        for label in ("first", "final"):
+            if (sample_dir / f"{label}.gif").is_file():
+                animations.append(f'<figure><figcaption>{label.title()}</figcaption><img loading="lazy" src="{run_dir.name}/{sample}/{label}.gif" alt="{label} motion"></figure>')
+        state = "Complete" if complete else "Incomplete / not generated"
+        cards.append(f'<article><h2>{run_dir.name} / {sample}: {escape(prompt)}</h2><p>{state}</p><div class="motions">{"".join(animations)}</div><p>{" | ".join(links)}</p></article>')
+    with observations.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-for row in rows:
-    print(row["sample"], "complete:", row["outputs_complete"], row["prompt"])
-print("Fill observations in:", observations)
-''')
-cell("code", '''
-archive = shutil.make_archive("/kaggle/working/irg-baseline-results", "zip", RESULTS_ROOT)
-print("Download this file from Kaggle output files:", archive)
+    print(run_dir.name, f"{sum(row['outputs_complete'] for row in rows)}/{expected} complete", observations)
+if not cards:
+    raise RuntimeError("Run the smoke test first, or use the export cell to save setup metadata.")
+page = '<!doctype html><html lang="en"><meta charset="utf-8"><title>IRG baseline results</title><style>body{font-family:system-ui;margin:2rem;max-width:1100px}article{border-top:1px solid #bbb;padding:1rem 0}.motions{display:flex;flex-wrap:wrap}figure{margin:0 1rem 1rem 0}img{width:360px;max-width:100%}a{overflow-wrap:anywhere}</style><h1>' + escape(RUN_ID) + '</h1><p>First and final motions within each model response. Open observations.csv to record your assessment.</p>' + "".join(cards) + '</html>'
+(EXPERIMENT_DIR / "index.html").write_text(page, encoding="utf-8")
+display(FileLink(str(EXPERIMENT_DIR / "index.html")))
 ''')
 
-cell("markdown", '''
+cell("code", r'''
+import hashlib
+from zipfile import ZipFile
+from IPython.display import FileLink, display
+
+transfer_notes = f"""IRG baseline experiment: {RUN_ID}
+
+Extract this ZIP into outputs/irg-baseline-results/ in your local repository.
+Open {RUN_ID}/index.html in a browser for first/final animations and file links
+(if present). Each run's observations.csv is editable; traces and motion arrays
+are kept beside each prompt. Failed runs may contain partial results only.
+
+experiment.json records the configured prompts, seed and checkpoint.
+smoke_status.json / batch_status.json record execution status and commands.
+smoke.log / batch.log record model loading, warnings and generation output.
+run.json inside each generated run contains actual model/runtime metadata.
+asset_revisions.json records downloaded Hugging Face model revisions if available.
+SHA256SUMS.json lists file hashes relative to this experiment directory.
+Absolute model paths are provenance; model weights are not included.
+
+To import the full batch into a NEW physical-pilot work directory, run from
+the repository root after extraction (replace NEW-WORK with a new folder):
+python -m pilot --work outputs/NEW-WORK prepare --baseline outputs/irg-baseline-results/{RUN_ID}/batch
+Review imported motions before running physical correction comparisons.
+"""
+(EXPERIMENT_DIR / "TRANSFER_README.txt").write_text(transfer_notes, encoding="utf-8")
+checksums = {}
+for file in sorted(EXPERIMENT_DIR.rglob("*")):
+    if file.is_file() and file.name != "SHA256SUMS.json":
+        checksums[file.relative_to(EXPERIMENT_DIR).as_posix()] = hashlib.sha256(file.read_bytes()).hexdigest()
+(EXPERIMENT_DIR / "SHA256SUMS.json").write_text(json.dumps(checksums, indent=2), encoding="utf-8")
+export_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
+archive_base = Path("/kaggle/working") / f"{RUN_ID}-export-{export_id}"
+archive = shutil.make_archive(str(archive_base), "zip", root_dir=EXPERIMENT_DIR.parent, base_dir=EXPERIMENT_DIR.name)
+with ZipFile(archive) as bundle:
+    if bundle.testzip() is not None:
+        raise RuntimeError("ZIP integrity check failed.")
+print("Experiment:", EXPERIMENT_DIR)
+print("Archive:", archive)
+print("Size MiB:", round(Path(archive).stat().st_size / 2**20, 2))
+display(FileLink(archive))
+''')
+
+cell("markdown", r'''
 ## Validation and troubleshooting
 
 Notebook JSON, every Python cell, and embedded subprocess scripts were
@@ -414,7 +561,7 @@ fit, FP16 numerical behavior, and GIF rendering require the smoke test above.
   already uses one prompt at a time and does not pool both T4 memories.
 - **Missing checkpoint parameters or malformed motion:** inspect the trace/error;
   verify the backbone/checkpoint selection before interpreting any result.
-- **Interrupted run:** existing outputs are kept. Select a new output directory
+- **Interrupted run:** existing outputs are kept. Rerun section 7 to create a new experiment
   for a retry; a trace alone does not indicate a completed result.
 ''')
 
