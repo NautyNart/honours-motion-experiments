@@ -97,6 +97,10 @@ If there are multiple copies, set `SOURCE_REPO` to the correct folder.
 Alternatively, set `REPO_URL` to your public repo's HTTPS clone URL. Commit and
 push these notebook/precision changes first. Keep private Git credentials out
 of URLs. To refresh an existing scratch copy, choose a new `REPO` directory.
+Reimporting the notebook does not replace an existing `/tmp` repository.
+The cell automatically applies the FP32 decoding fix to recognised older
+scratch runners and verifies it again before inference. Existing model files
+are retained. The attached source dataset remains read only.
 ''')
 
 cell("code", r'''
@@ -124,6 +128,36 @@ for path in (RUNNER, REPO / "requirements-baseline.txt"):
         raise FileNotFoundError(f"Missing {path}. Upload the complete updated source.")
 if "--llm-dtype" not in RUNNER.read_text():
     raise RuntimeError("This source copy is outdated; upload the version with FP16 support.")
+def ensure_runner_fp32():
+    # Patch only the writable scratch runner, including a cached /tmp copy.
+    # NumPy statistics can promote decoded features to Float64. Cast both the
+    # saved features (for known older runners) and the joint-recovery input.
+    import ast
+
+    source = RUNNER.read_text(encoding="utf-8")
+    old_call = "recover_from_ric(features, 22)"
+    fixed_call = "recover_from_ric(features.float(), 22)"
+    if source.count(old_call) + source.count(fixed_call) != 1:
+        raise RuntimeError(
+            "Unrecognised joint-recovery code; attach the updated repository "
+            "and choose a fresh REPO path. No automatic edit was made."
+        )
+    patched = source.replace(old_call, fixed_call)
+    for old_features in (
+        "features = model.motion_denorm(normalized.float()).cpu()",
+        "features = model.motion_denorm(normalized).cpu()",
+    ):
+        patched = patched.replace(
+            old_features, "features = model.motion_denorm(normalized.float()).float().cpu()"
+        )
+    ast.parse(patched)  # Validate before writing or launching the GPU process.
+    if patched != source:
+        RUNNER.write_text(patched, encoding="utf-8", newline="\n")
+        print("Applied Float32 decoding compatibility fix to:", RUNNER)
+    else:
+        print("Float32 decoding compatibility fix verified.")
+
+ensure_runner_fp32()
 print("Repository:", REPO)
 print("Results:", RESULTS_ROOT)
 ''')
@@ -337,6 +371,7 @@ experiment. Fewer prompts reduce total runtime, not single-generation memory.
 
 cell("code", r'''
 def run_baseline(output_dir, limit):
+    ensure_runner_fp32()
     current = {"run_id": RUN_ID, "seed": SEED, "prompts": PROMPTS,
                "checkpoint": str(CHECKPOINT), "llm_dtype": LLM_DTYPE,
                "vq_dtype": "float32", "do_sample": False}
@@ -561,6 +596,10 @@ fit, FP16 numerical behavior, and GIF rendering require the smoke test above.
   already uses one prompt at a time and does not pool both T4 memories.
 - **Missing checkpoint parameters or malformed motion:** inspect the trace/error;
   verify the backbone/checkpoint selection before interpreting any result.
+- **Float/Double error in joint recovery:** this notebook automatically fixes
+  recognised older scratch runners in section 2 and before each inference run.
+  Upload this notebook version and rerun section 2, then section 7 for a fresh
+  experiment and section 8. Existing model downloads can be reused.
 - **Interrupted run:** existing outputs are kept. Rerun section 7 to create a new experiment
   for a retry; a trace alone does not indicate a completed result.
 ''')
